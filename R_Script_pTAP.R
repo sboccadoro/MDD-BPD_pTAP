@@ -1,8 +1,12 @@
-
 #________________________Import data________________________________________________________________________________________________________________________
+#data for the analyses in the whole sample
+
 library(readxl)
 pTAP <- read_excel("C:/Yourpath/R_data_pTAP.xlsx")     #directory of the data and name of the file with the data
 View(pTAP)
+
+#data for the supplementary analyses in the women subsample
+pTAP <- read_excel("C:/Yourpath/R_data_pTAP_women.xlsx")   #directory of the data and name of the file with the data
 #________________________Check structure of imported data________________________________________________________________________________________________________________________
 str(pTAP)
 
@@ -19,11 +23,11 @@ pTAP$Age <- as.numeric (pTAP$Age)
 pTAP$Group <- factor(pTAP$Group)
 pTAP$Belief <- factor(pTAP$Belief)
 pTAP$SCR <- as.numeric (pTAP$SCR)
-pTAP$Cluster <- factor(pTAP$Cluster)
+pTAP$Cluster <- factor(pTAP$Cluster)           # --> only in the whole sample, not in the women subsample
 
 #_______________________Models______________________________________________________________________________________________________________
 
-#null model selection
+#null model selection for the whole sample
 
 m0 <- lmer(Aggrchoice ~ (1|Subject), data = pTAP)
 m01 <- lmer(Aggrchoice ~ (1 + Trial.z|Subject), data = pTAP)
@@ -43,23 +47,31 @@ qqnorm(resid(m03))
 qqline(resid(m03))
 shapiro.test(residuals(m03))
 
-# Fit robust linear mixed-effects model for Aggrchoice
-
+# Fit robust linear mixed-effects model for Aggrchoice in the whole sample
 library(robustlmm)
 
-m1 <- rlmer(Aggrchoice ~ Group + Outcome + Gender + Belief + Trial.z + Group*Outcome + Gender*Outcome
-                    + (1 + Trial.z|Subject), data = pTAP, method ="DASvar")
+m1 <- rlmer(Aggrchoice ~ Group + Outcome + Gender + Belief + Trial.z + Group*Outcome + (1 + Trial.z|Subject), data = pTAP, method ="DASvar")
 summary(m1)
 
 library(sjPlot)
 tab_model(m1, show.se = TRUE, show.stat = "t")
 
-# Fit robust linear mixed-effects model for SCRs
+# Fit robust linear mixed-effects model for Aggrchoice in the women subsample
+mS1 <- rlmer(Aggrchoice ~ Group + Outcome + Trial.z + Group*Outcome + (1 + Trial.z|Subject), data = pTAP, method ="DASvar")
+summary(mS1)
+tab_model(mS1, show.se = TRUE, show.stat = "t")
 
-m2 <- rlmer(SCR ~ Aggrchoice + Group + Outcome + Gender + Belief + Trial.z + Group*Aggrchoice + Gender*Aggrchoice +
-             Group*Outcome + Gender*Outcome + (1+Trial.z|Subject), data = pTAP, method ="DASvar")
+# Fit robust linear mixed-effects model for SCRs in the whole sample
+
+m2 <- rlmer(SCR ~ Aggrchoice + Group + Outcome + Gender + Belief + Trial.z + Group*Aggrchoice + Group*Outcome + (1+Trial.z|Subject), data = pTAP, method ="DASvar")
 summary(m2)
 tab_model(m2, show.se = TRUE, show.stat = "t")
+
+# Fit robust linear mixed-effects model for SCRs in the women subsample
+mS2 <- rlmer(SCR ~ Aggrchoice + Group + Outcome + Trial.z + Group*Aggrchoice + Group*Outcome + (1+Trial.z|Subject), data = pTAP, method ="DASvar")
+
+tab_model(mS2, show.se = TRUE, show.stat = "t")
+summary(mS2)
 
 #post-hoc tests for significant interaction effects
 
@@ -75,8 +87,8 @@ library(ggplot2)
 ef1 <- effect("Trial.z", m2, KR=T)
 y <- as.data.frame(ef1)
 g <- ggplot(y, aes(Trial.z, fit)) + geom_line(aes(color = "blue")) + geom_ribbon(aes(ymin=fit-se, ymax=fit+se), fill = "blue", alpha = 0.3)
-g1 <- g + theme(axis.text=element_text(size=12), axis.text.x = element_text(face="bold"),
-                axis.title=element_text(size=14,face="bold")) + theme(plot.title = element_text(size=15, face = "bold", hjust = 0.5))
+g1 <- g + theme_prism() + theme(axis.text=element_text(size=12), axis.text.x = element_text(face="bold"),
+                axis.title=element_text(size=16,face="bold")) + theme(plot.title = element_text(size=18, face = "bold", hjust = 0.5))
 suppfig1 <- g1 + labs(x="Trial.z", y="SCR") + ggtitle("Main effect of Trial on SCR") + scale_color_manual(values=c("blue")) + theme(legend.position = "none")
 plot(suppfig1)
 
@@ -91,23 +103,22 @@ ggplot(suppfig2, aes(Aggrchoice, fit, group = Group)) +
   scale_color_manual(values = c("blue", "gold2", "firebrick3"), name = expression(bold("Group")), labels = c("HC", "MDD", "BPD")) +
   scale_fill_manual(values = c("blue", "gold2", "firebrick3"), name = expression(bold("95% CI")), labels = c("HC", "MDD", "BPD")) +
   scale_linetype_manual(values = c("solid", "dashed", "dotted"), name = expression(bold("Group")), labels = c("HC", "MDD", "BPD")) +
-  theme_minimal() +
+  theme_prism() +
   theme(legend.position = "right",
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 14),
-        axis.title.x = element_text(size = 14),
-        axis.title.y = element_text(size = 14),
-        axis.text.x = element_text(size = 12),
-        axis.text.y = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 12),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
         plot.title = element_text(size = 15, face = "bold"))
 
 
 #Clusters
 
-# Fit robust linear mixed-effects model for Aggrchoice
+# Fit robust linear mixed-effects model for Aggrchoice in the whole sample
 
-m3 <- rlmer(Aggrchoice ~ Cluster + Outcome + Gender + Belief + Trial.z + Cluster*Outcome 
-                    + Gender*Outcome + (1+Trial.z|Subject), data=pTAP, method ="DASvar")
+m3 <- rlmer(Aggrchoice ~ Cluster + Outcome + Gender + Belief + Trial.z + Cluster*Outcome + (1+Trial.z|Subject), data=pTAP, method ="DASvar")
 summary(m3)
 tab_model(m3, show.se = TRUE, show.stat = "t")
 
@@ -120,17 +131,21 @@ emmeans(m3, pairwise ~ Cluster|Outcome,  adjust = "tukey")
 
 (mylist <- list(Choice=seq(1,4,by=0.5),Outcome=c("1(Won)","2(Loss)")))
 r <- emmip(m3, Cluster ~Outcome, at=mylist,CIs=TRUE) + xlab("Outcome") + 
-  ylab("Aggrchoice") + theme(text = element_text(face = "bold", size = 14), legend.text = element_text(face = "plain"))
+  ylab("Aggrchoice") + theme(text = element_text(face = "bold", size = 10), legend.text = element_text(face = "plain"))
 
-r1 <- r + labs(title = "Interaction effect between Outcome and Cluster on Aggrchoice") + theme(plot.title = element_text(size=15, face = "bold", hjust = 0.5))
+r1 <- r + labs(title = "Interaction effect between Outcome and Cluster on Aggrchoice") + theme_prism() + 
+theme(axis.title = element_text(size = 15), axis.text.x = element_text(size = 13), plot.title = element_text(size=16, face = "bold", hjust = 0.5))
 r2 <- r1 + scale_colour_manual(values = c("#0088cc", "orange"), labels = c("LPA", "HPA"))
 fig4 <- r2 + scale_x_discrete(labels = c("Won","Loss"))
 plot(fig4)
 
-# Fit robust linear mixed-effects model for SCRs
+# Fit robust linear mixed-effects model for SCRs in the whole sample
 
-m4 <- rlmer(SCR ~ Aggrchoice + Cluster + Outcome + Belief + Gender + Trial.z + Cluster*Aggrchoice + 
-              Gender*Aggrchoice + Cluster*Outcome + Gender*Outcome +
-              (1+Trial.z|Subject), data = pTAP, method ="DASvar")
+m4 <- rlmer(SCR ~ Aggrchoice + Cluster + Outcome + Belief + Gender + Trial.z + Cluster*Aggrchoice + Cluster*Outcome + (1+Trial.z|Subject), data = pTAP, method ="DASvar")
 summary(m4)
 tab_model(m4, show.se = TRUE, show.stat = "t")
+
+# Calculate effect size (standard coefficients or beta coefficients)
+library(effectsize)
+standardize_parameters(m3)
+
